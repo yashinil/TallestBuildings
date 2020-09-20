@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+    <head>
+        <meta charset="UTF-8">
+        <title>JSON</title>
+        <style>
+            h3{
+                margin-top: 150px;
+                text-align: center;
+                padding-bottom: 20px;
+            }
+            .form{
+                text-align: center;
+            }
+            .elements{
+                margin-bottom: 20px;
+            }
+            td.cell{
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <script type="text/javascript">
+            var html_text="";
+            var error_flag=0
+            var buildings=[]
+            function viewJSON(){
+                var URL=document.getElementById('URL').value;
+                //checking if the URL box is empty 
+                if(URL==""){
+                    alert("Please Enter the URL of the list of tallest buildings.");
+                    return;
+                }
+                //checking if the fie has .json extension
+                if(URL.substring(URL.length-5,URL.length)!=".json"){
+                    alert("Format of the URL is not valid. It should be a Json file. Please check the file URL");
+                    return;
+                }
+                function loadJSON(url){
+                    xmlhttp=new XMLHttpRequest();
+                    xmlhttp.open("GET",url,false);
+                    try{
+                        xmlhttp.send();
+                    }
+                    catch (e){
+                        //checking if the file is not available on the server 
+                        if(e instanceof ReferenceError){
+                            alert("The File name : "+URL+" does not exist. Please check the name and try again");
+                            return;
+                        }
+                        else{
+                            alert("The File name : "+URL+" does not exist. Please check the name and try again");
+                            return;
+                        }
+                    }
+                    //console.log(xmlhttp);
+                    if(xmlhttp.responseText==""){
+                        alert("Json file is empty. Please check the json file and try again");
+                        error_flag=1;
+                        return;
+                    }
+                    if(xmlhttp.responseText=="{}" || xmlhttp.responseText=="{\n}"){
+                        alert("Missing Mainline, Please check the json file and try again");
+                        error_flag=1;
+                        return;
+                    }
+                    var jsonDoc=xmlhttp.responseText;
+                    jsonObj=JSON.parse(jsonDoc);
+                    return jsonObj;
+                }
+                jsonObj=loadJSON(URL);
+                jsonObj.onload=generateHTML(jsonObj);
+                if(error_flag==0){
+                    building_window=window.open("","Homework4","height=800,width=1120");
+                    building_window.document.write(html_text);
+                    building_window.document.close()
+                }                
+            }
+            function generateHTML(jsonObj){
+                //console.log(jsonObj);
+                html_text=""
+                if(jsonObj['Mainline']['Table']==undefined){
+                    alert("Missing Table key, Please check the json file and try again");
+                    error_flag=1;
+                    return;
+                }
+                root=jsonObj.DoocumentElement;
+                buildings=jsonObj['Mainline']['Table'];
+                //checking if header is missing
+                if(buildings['Header']==undefined){
+                    alert("Missing Header key, Please check the json file and try again");
+                    error_flag=1;
+                    return;
+                }
+                //checking if header data is missing
+                if(buildings['Header']['Data']==undefined){
+                    alert("Missing Header-Data key, Please check the json file and try again");
+                    error_flag=1;
+                    return;
+                }
+                //checking if there are no rows in the json file
+                if(buildings['Row']==undefined){
+                    alert("Json file does not have any elements to show. Please check the json file and try again");
+                    error_flag=1;
+                    return;
+                }
+                if(buildings['Row'].length==0){
+                    alert("Json file does not have any elements to show. Please check the json file and try again");
+                    error_flag=1;
+                    return;
+                }
+                window.html_text+="<html><head><title>JSON Parse Result</title></head><body>";
+                html_text+="<table border='2'>";
+                
+                //extracting the header and printing it
+                buildingHeader=buildings['Header']['Data'];
+                html_text+="<tbody>";
+                html_text+="<tr>";
+                //output the headers
+                for(i=0;i<buildingHeader.length;i++){
+                    header=buildingHeader[i];  
+                    html_text+="<th>"+header+"</th>";
+                }
+                html_text+="</tr>";
+                // output out the values
+                buildingRows=buildings['Row'];
+                
+                for(i=0;i<buildingRows.length;i++){
+                    //get properties of a building (an object)
+                    buildingNodeList=buildingRows[i]; 
+                    
+                    html_text+="<tr>"; 
+                    //start a new row of the output table
+                    var bldg_keys = Object.keys(buildingNodeList);
+                    
+                    //check if the number of keys in header and data are same
+                    if(buildingHeader.length!=bldg_keys.length){
+                        alert("Number of keys in row "+(i+1)+" is not same as number of headers so this row is skipped.");
+                    }
+                    else{
+                    for(j=0;j<bldg_keys.length;j++){
+                        prop = bldg_keys[j]; 
+                        //if any data entry is empty
+                        if(buildingNodeList[prop]==""){
+                            html_text+="<td class='cell'></td>";
+                        }
+                        //handle images separately
+                        else if(bldg_keys[j]=="Logo"){
+                            html_text+="<td><img src='"+ buildingNodeList[prop] +"' width=175px height=175px style='object-fit:fill'></td>";
+                        }
+                        //handle links of wikipedia pages separately
+                        else if(bldg_keys[j]=="HomePage"){
+                            html_text+="<td class='cell'><a href='"+ buildingNodeList[prop] +"'>"+ buildingNodeList[prop] +"</a></td>"
+                        }
+                        else if(bldg_keys[j]=="Hubs"){
+                            hubs=buildingNodeList[prop]['Hub'];
+                            
+                            if(hubs==undefined){
+                                html_text+="<td class='cell'></td>";
+                            }
+                            else{
+                                html_text+="<td class='cell'><ul>";
+                                for(k=0;k<hubs.length;k++){
+                                    if(k==0){
+                                        html_text+="<li><b>"+hubs[k]+"</b></li>"
+                                    }
+                                    else{
+                                        html_text+="<li>"+hubs[k]+"</li>"
+                                    }
+                                }
+                                html_text+="</ul></td>";
+                            }
+                        }
+                        else{
+                            html_text+="<td class='cell'>"+ buildingNodeList[prop] +"</td>";
+                        }
+                    }
+                    }
+                    html_text+="</tr>";
+                }
+                html_text+="</tbody>";
+                html_text+="</table>";
+                html_text+= "</bo" + "<dy> </html>";
+            } 
+        </script>
+        <h3 class="elements">Enter URL for the list of tallest buildings JSON File</h3>
+        <div class="form">
+        <form name="get_url" method="POST" id="tall">
+            <input type="text" id="URL" maxlength="500" value="" class="elements">
+            <br>
+            <input type="button" name="submit" value="Submit Query" onclick="viewJSON()" class="elements">
+        </form>
+        </div>
+    </body>
+</html>
